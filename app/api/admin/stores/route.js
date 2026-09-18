@@ -1,5 +1,5 @@
 import { connectDB } from "../../../../lib/mongodb";
-import Store from "../../../../lib/models/Store";
+import Store from "../../../lib/models/Store";
 import { requireSuperAdmin } from "../../../../lib/permissions";
 
 export async function GET() {
