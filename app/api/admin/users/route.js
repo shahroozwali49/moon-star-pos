@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { connectDB } from "../../../../lib/mongodb";
-import User from "../../../../lib/models/User";
-import Store from "../../../../lib/models/Store";
+import User from "../../../lib/models/User";
+import Store from "../../../lib/models/Store";
 import { requireSuperAdmin } from "../../../../lib/permissions";
 
 export async function GET() {
