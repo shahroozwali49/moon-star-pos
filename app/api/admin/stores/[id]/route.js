@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
-import { connectDB } from "../../../../../lib/mongodb";
-import Store from "../../../../../lib/models/Store";
-import { requireSuperAdmin } from "../../../../../lib/permissions";
+import { connectDB } from "../../../../lib/mongodb";
+import Store from "../../../../lib/models/Store";
+import { requireSuperAdmin } from "../../../../lib/permissions";
 
 export async function PATCH(request, { params }) {
   const auth = await requireSuperAdmin();
