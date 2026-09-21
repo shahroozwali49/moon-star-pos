@@ -2,9 +2,20 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
 const COOKIE_NAME = "moonstar_session";
+
 const secret = () => {
   const value = process.env.JWT_SECRET;
-  if (!value || value.length < 32) throw new Error("JWT_SECRET must be at least 32 characters");
+  
+  if (!value) {
+    throw new Error(
+      "JWT_SECRET environment variable is not defined. Set it in Vercel Environment Variables."
+    );
+  }
+  
+  if (value.length < 32) {
+    throw new Error("JWT_SECRET must be at least 32 characters long");
+  }
+  
   return new TextEncoder().encode(value);
 };
 
@@ -13,7 +24,11 @@ export async function createSession(user) {
     sub: String(user._id),
     role: user.role,
     email: user.email
-  }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("8h").sign(secret());
+  })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("8h")
+    .sign(secret());
 
   const jar = await cookies();
   jar.set(COOKIE_NAME, token, {
@@ -29,6 +44,7 @@ export async function getSession() {
   const jar = await cookies();
   const token = jar.get(COOKIE_NAME)?.value;
   if (!token) return null;
+  
   try {
     const { payload } = await jwtVerify(token, secret());
     return payload;
