@@ -72,3 +72,5 @@ This is a functional POS administration starter, not a fully audited commercial 
 If a real MongoDB password, JWT secret, or administrator password was ever committed to GitHub, rotate those credentials immediately. Removing a file from the latest commit does not remove older copies from Git history.
 
 `.env.local.example` contains placeholders only and is safe to commit.
+
+<!-- Vercel deployment trigger: 2026-09-22 -->
