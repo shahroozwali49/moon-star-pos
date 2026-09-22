@@ -1,123 +1,50 @@
- "use client";
+"use client";
 import { useEffect, useState } from "react";
+import { ArrowRight, BarChart3, CheckCircle2, Edit3, Eye, EyeOff, LayoutDashboard, LogOut, Menu, Moon, Package, ShieldCheck, Store, Users, X } from "lucide-react";
 
 const roleLabel = role => ({ SUPER_ADMIN: "Super Admin", STORE_ADMIN: "Store Admin", CASHIER: "Cashier" }[role] || role);
+const money = value => `PKR ${Number(value || 0).toLocaleString("en-PK", { maximumFractionDigits: 2 })}`;
+const blankUser = { name: "", email: "", password: "", role: "CASHIER", storeIds: [] };
+const blankItem = { name: "", sku: "", barcode: "", category: "General", costPrice: "", sellingPrice: "", reorderLevel: 5, stockByStore: [] };
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [stores, setStores] = useState([]);
-  const [users, setUsers] = useState([]);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState("Overview");
-  const [storeForm, setStoreForm] = useState({ name: "", code: "", address: "" });
-  const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "CASHIER", storeIds: [] });
+  const [user,setUser]=useState(null),[stores,setStores]=useState([]),[users,setUsers]=useState([]),[items,setItems]=useState([]),[reports,setReports]=useState(null);
+  const [email,setEmail]=useState(""),[password,setPassword]=useState(""),[showPassword,setShowPassword]=useState(false),[error,setError]=useState(""),[loading,setLoading]=useState(true),[tab,setTab]=useState("Overview"),[mobileNav,setMobileNav]=useState(false);
+  const [editingUser,setEditingUser]=useState(null),[storeForm,setStoreForm]=useState({name:"",code:"",address:""}),[userForm,setUserForm]=useState(blankUser),[itemForm,setItemForm]=useState(blankItem);
 
-  async function request(url, options = {}) {
-    const res = await fetch(url, { ...options, headers: { "Content-Type": "application/json", ...(options.headers || {}) } });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || "Request failed");
-    return data;
-  }
-  async function loadAdmin() {
-    const [s, u] = await Promise.all([request("/api/admin/stores"), request("/api/admin/users")]);
-    setStores(s.stores || []); setUsers(u.users || []);
-  }
-  async function refresh() {
-    try {
-      const data = await request("/api/auth/me");
-      setUser(data.user);
-      if (data.user?.role === "SUPER_ADMIN") await loadAdmin();
-    } catch { /* signed out or backend unavailable */ }
-    finally { setLoading(false); }
-  }
-  useEffect(() => { refresh(); }, []);
+  async function request(url,options={}){const res=await fetch(url,{...options,headers:{"Content-Type":"application/json",...(options.headers||{})}});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||"Request failed");return data;}
+  async function loadAdmin(){const [s,u,i,r]=await Promise.all([request("/api/admin/stores"),request("/api/admin/users"),request("/api/admin/items"),request("/api/admin/reports")]);setStores(s.stores||[]);setUsers(u.users||[]);setItems(i.items||[]);setReports(r);}
+  async function refresh(){try{const d=await request("/api/auth/me");setUser(d.user);if(d.user?.role==="SUPER_ADMIN")await loadAdmin();}catch{}finally{setLoading(false);}}
+  useEffect(()=>{refresh();},[]);
+  async function login(e){e.preventDefault();setError("");try{const d=await request("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});setUser(d.user);setPassword("");if(d.user.role==="SUPER_ADMIN")await loadAdmin();}catch(e){setError(e.message);}}
+  async function logout(){await request("/api/auth/logout",{method:"POST"});setUser(null);setStores([]);setUsers([]);setItems([]);setReports(null);}
+  async function createStore(e){e.preventDefault();setError("");try{await request("/api/admin/stores",{method:"POST",body:JSON.stringify(storeForm)});setStoreForm({name:"",code:"",address:""});await loadAdmin();}catch(e){setError(e.message);}}
+  async function saveUser(e){e.preventDefault();setError("");try{if(editingUser){const body={name:userForm.name,role:userForm.role,storeIds:userForm.storeIds};if(userForm.password)body.password=userForm.password;await request(`/api/admin/users/${editingUser._id}`,{method:"PATCH",body:JSON.stringify(body)});}else await request("/api/admin/users",{method:"POST",body:JSON.stringify(userForm)});setEditingUser(null);setUserForm({...blankUser});await loadAdmin();}catch(e){setError(e.message);}}
+  async function toggleUser(p){try{await request(`/api/admin/users/${p._id}`,{method:"PATCH",body:JSON.stringify({active:!p.active})});await loadAdmin();}catch(e){setError(e.message);}}
+  async function toggleStore(s){try{await request(`/api/admin/stores/${s._id}`,{method:"PATCH",body:JSON.stringify({active:!s.active})});await loadAdmin();}catch(e){setError(e.message);}}
+  async function createItem(e){e.preventDefault();setError("");try{await request("/api/admin/items",{method:"POST",body:JSON.stringify({...itemForm,costPrice:Number(itemForm.costPrice),sellingPrice:Number(itemForm.sellingPrice),reorderLevel:Number(itemForm.reorderLevel)})});setItemForm({...blankItem});await loadAdmin();}catch(e){setError(e.message);}}
+  function startEdit(p){setEditingUser(p);setUserForm({name:p.name,email:p.email,password:"",role:p.role,storeIds:(p.storeIds||[]).map(s=>String(s._id||s.id))});}
+  function setStoreAccess(id,checked){setUserForm(p=>({...p,storeIds:checked?[...new Set([...p.storeIds,id])]:p.storeIds.filter(x=>x!==id)}));}
+  function setItemStoreStock(id,quantity){setItemForm(p=>{const exists=p.stockByStore.some(x=>String(x.storeId)===String(id));return {...p,stockByStore:exists?p.stockByStore.map(x=>String(x.storeId)===String(id)?{...x,quantity:Number(quantity)||0}:x):[...p.stockByStore,{storeId:id,quantity:Number(quantity)||0}]};});}
 
-  async function login(e) {
-    e.preventDefault(); setError("");
-    try {
-      const data = await request("/api/auth/login", { method: "POST", body: JSON.stringify({ email, password }) });
-      setUser(data.user); setPassword("");
-      if (data.user.role === "SUPER_ADMIN") await loadAdmin();
-    } catch (e) { setError(e.message); }
-  }
-  async function logout() {
-    await request("/api/auth/logout", { method: "POST" });
-    setUser(null); setStores([]); setUsers([]);
-  }
-  async function createStore(e) {
-    e.preventDefault(); setError("");
-    try {
-      await request("/api/admin/stores", { method: "POST", body: JSON.stringify(storeForm) });
-      setStoreForm({ name: "", code: "", address: "" }); await loadAdmin();
-    } catch (e) { setError(e.message); }
-  }
-  async function createUser(e) {
-    e.preventDefault(); setError("");
-    try {
-      await request("/api/admin/users", { method: "POST", body: JSON.stringify(userForm) });
-      setUserForm({ name: "", email: "", password: "", role: "CASHIER", storeIds: [] }); await loadAdmin();
-    } catch (e) { setError(e.message); }
-  }
-  async function toggleStore(store) {
-    try { await request(`/api/admin/stores/${store._id}`, { method: "PATCH", body: JSON.stringify({ active: !store.active }) }); await loadAdmin(); }
-    catch (e) { setError(e.message); }
-  }
-  async function toggleUser(person) {
-    try { await request(`/api/admin/users/${person._id}`, { method: "PATCH", body: JSON.stringify({ active: !person.active }) }); await loadAdmin(); }
-    catch (e) { setError(e.message); }
-  }
+  if(loading)return <main className="loading">Loading Moon Star POS…</main>;
+  if(!user)return <main className="login-shell"><section className="login-layout"><div className="login-showcase"><div className="showcase-brand"><div className="brand-mark"><Moon size={28}/></div><div><strong>MOON STAR</strong><small>POINT OF SALE</small></div></div><div className="showcase-copy"><span className="welcome-badge">Smart store management</span><h1>Run your stores.<br/><em>Own your growth.</em></h1><p>One secure workspace for stores, users, inventory and business operations.</p></div><div className="feature-list"><div><ShieldCheck size={17}/><span><b>Role-based access</b><small>Give each team member only the stores they need.</small></span></div><div><Store size={17}/><span><b>Multi-store ready</b><small>Manage locations and inventory centrally.</small></span></div><div><BarChart3 size={17}/><span><b>Operational analytics</b><small>Monitor stock, users and store performance.</small></span></div></div></div><div className="login-panel"><div className="mobile-brand"><div className="brand-mark"><Moon size={23}/></div><strong>MOON STAR <span>POS</span></strong></div><div className="signin-heading"><span className="eyebrow">WELCOME BACK</span><h2>Sign in to your workspace</h2><p>Enter your credentials to continue.</p></div><form onSubmit={login} className="form-stack"><label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@example.com" required/></label><label>Password<div className="password-wrap"><input type={showPassword?"text":"password"} value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password" required/><button type="button" className="password-toggle" onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={17}/>:<Eye size={17}/>}</button></div></label>{error&&<div className="login-error">{error}</div>}<button className="primary login-button" type="submit">Sign in <ArrowRight size={17}/></button></form><div className="secure-note"><ShieldCheck size={16}/> Secure authenticated session</div></div></section></main>;
 
-  if (loading) return <main className="loading">Loading Moon Star POS…</main>;
-  if (!user) return <main className="login-shell">
-    <section className="login-card">
-      <div className="brand-mark">☾</div><p className="eyebrow">INVESTMENT TRADING CORPORATION</p>
-      <h1>Moon Star <span>POS</span></h1><p className="muted">Sign in to manage your stores and operations.</p>
-      <form onSubmit={login} className="form-stack">
-        <label>Email address<input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="admin@example.com" required /></label>
-        <label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Enter your password" required /></label>
-        {error && <p className="error">{error}</p>}
-        <button className="primary full" type="submit">Sign in <span>→</span></button>
-      </form>
-      <p className="login-foot">Secure store administration · Powered by Moon Star</p>
-    </section>
-  </main>;
+  const isSuper=user.role==="SUPER_ADMIN";
+  const nav=isSuper?[{label:"Overview",icon:LayoutDashboard},{label:"Reports",icon:BarChart3},{label:"Stores",icon:Store},{label:"Users",icon:Users},{label:"Items",icon:Package}]:[{label:"Overview",icon:LayoutDashboard},{label:"My Stores",icon:Store}];
 
-  const isSuper = user.role === "SUPER_ADMIN";
-  const nav = isSuper ? ["Overview", "Stores", "Users"] : ["Overview", "My Stores"];
-  return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="side-brand"><div className="mini-mark">☾</div><div><b>MOON STAR</b><small>POINT OF SALE</small></div></div>
-      <div className="nav-label">WORKSPACE</div>
-      {nav.map(item=><button key={item} className={`nav-item ${tab===item?"selected":""}`} onClick={()=>setTab(item)}><span>{item==="Overview"?"▦":item==="Stores"||item==="My Stores"?"▣":"♙"}</span>{item}</button>)}
-      <div className="sidebar-bottom"><div className="avatar">{user.name?.[0]?.toUpperCase() || "U"}</div><div className="profile"><b>{user.name}</b><small>{roleLabel(user.role)}</small></div><button className="logout" onClick={logout} title="Sign out">↗</button></div>
-    </aside>
-    <main className="main-area">
-      <header className="topbar"><div><span className="crumb">Workspace</span><span className="slash">/</span><b>{tab}</b></div><div className="top-right"><span className="status-dot"></span> System online <div className="top-avatar">{user.name?.[0]?.toUpperCase()}</div></div></header>
-      <div className="content">
-        <div className="welcome"><div><p className="eyebrow">MOON STAR POS / ADMINISTRATION</p><h1>{tab==="Overview"?"Good to see you, "+user.name.split(" ")[0]:tab}</h1><p className="muted">{isSuper?"Manage your stores, users, and access from one place.":"Here’s an overview of your assigned store access."}</p></div><span className="date-chip">● Live workspace</span></div>
-        {error && <div className="notice">{error}<button onClick={()=>setError("")}>×</button></div>}
-        {tab==="Overview" && <><div className="stats-grid">
-          <Stat title="Total stores" value={isSuper?stores.length:(user.stores?.length||0)} note="Registered locations" icon="▣"/>
-          <Stat title="Active users" value={isSuper?users.filter(x=>x.active).length:"—"} note="With system access" icon="♙"/>
-          <Stat title="Your role" value={roleLabel(user.role)} note="Current permission level" icon="✳"/>
-          <Stat title="System status" value="Online" note="Application available" icon="⌁" green/>
-        </div><div className="panel"><div className="panel-head"><div><h2>Quick overview</h2><p className="muted">Your workspace at a glance</p></div>{isSuper&&<button className="secondary" onClick={()=>setTab("Stores")}>Manage stores →</button>}</div>
-          {isSuper?<div className="overview-row"><div className="overview-icon">▣</div><div><b>Store management</b><p className="muted">Create locations and control their active status.</p></div><button className="text-button" onClick={()=>setTab("Stores")}>Open <span>→</span></button></div>:<div className="empty-state"><div className="empty-icon">▣</div><b>Your assigned stores</b><p>Stores assigned to your account appear here.</p></div>}
-        </div></>}
-        {(tab==="Stores" || tab==="My Stores") && <div className="panel"><div className="panel-head"><div><h2>{isSuper?"Store directory":"Assigned stores"}</h2><p className="muted">Locations available to your account</p></div><span className="count-pill">{isSuper?stores.length:(user.stores?.length||0)} stores</span></div>
-          {isSuper&&<form className="inline-form" onSubmit={createStore}><input placeholder="Store name" value={storeForm.name} onChange={e=>setStoreForm({...storeForm,name:e.target.value})} required/><input placeholder="Code (e.g. STR001)" value={storeForm.code} onChange={e=>setStoreForm({...storeForm,code:e.target.value})} required/><input placeholder="Address (optional)" value={storeForm.address} onChange={e=>setStoreForm({...storeForm,address:e.target.value})}/><button className="primary" type="submit">＋ Add store</button></form>}
-          <div className="table-wrap"><table><thead><tr><th>STORE</th><th>CODE</th><th>ADDRESS</th><th>STATUS</th>{isSuper&&<th></th>}</tr></thead><tbody>{(isSuper?stores:(user.stores||[])).map(s=><tr key={s._id||s.id}><td><b>{s.name}</b></td><td><span className="code-pill">{s.code}</span></td><td>{s.address||"—"}</td><td><span className={`pill ${s.active===false?"inactive":"active"}`}>{s.active===false?"Inactive":"Active"}</span></td>{isSuper&&<td><button className="text-button" onClick={()=>toggleStore(s)}>{s.active===false?"Activate":"Deactivate"}</button></td>}</tr>)}</tbody></table>{(isSuper?stores:(user.stores||[])).length===0&&<div className="empty-state">No stores to display yet.</div>}</div>
-        </div>}
-        {tab==="Users"&&isSuper&&<div className="panel"><div className="panel-head"><div><h2>User management</h2><p className="muted">Create accounts and assign store-level access.</p></div><span className="count-pill">{users.length} users</span></div>
-          <form className="user-form" onSubmit={createUser}><input placeholder="Full name" value={userForm.name} onChange={e=>setUserForm({...userForm,name:e.target.value})} required/><input type="email" placeholder="Email address" value={userForm.email} onChange={e=>setUserForm({...userForm,email:e.target.value})} required/><input type="password" minLength="12" placeholder="Temporary password (12+ chars)" value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} required/><select value={userForm.role} onChange={e=>setUserForm({...userForm,role:e.target.value})}><option value="CASHIER">Cashier</option><option value="STORE_ADMIN">Store Admin</option></select><div className="store-checks">{stores.map(s=><label key={s._id}><input type="checkbox" checked={userForm.storeIds.includes(s._id)} onChange={e=>setUserForm({...userForm,storeIds:e.target.checked?[...userForm.storeIds,s._id]:userForm.storeIds.filter(id=>id!==s._id)})}/>{s.name}</label>)}</div><button className="primary" type="submit">＋ Create user</button></form>
-          <div className="table-wrap"><table><thead><tr><th>USER</th><th>ROLE</th><th>STORE ACCESS</th><th>STATUS</th><th></th></tr></thead><tbody>{users.map(p=><tr key={p._id}><td><b>{p.name}</b><small className="table-sub">{p.email}</small></td><td>{roleLabel(p.role)}</td><td>{(p.storeIds||[]).map(s=>s.name).join(", ")||"—"}</td><td><span className={`pill ${p.active?"active":"inactive"}`}>{p.active?"Active":"Inactive"}</span></td><td><button className="text-button" onClick={()=>toggleUser(p)}>{p.active?"Deactivate":"Activate"}</button></td></tr>)}</tbody></table>{users.length===0&&<div className="empty-state">No users created yet.</div>}</div>
-        </div>}
-      </div>
-      <footer>© {new Date().getFullYear()} Moon Star POS <span>Secure workspace · v1.0</span></footer>
-    </main>
-  </div>;
+  return <div className="app-shell">{mobileNav&&<button className="mobile-overlay" onClick={()=>setMobileNav(false)} aria-label="Close menu"/>}<aside className={`sidebar ${mobileNav?"sidebar-open":""}`}><div className="side-brand"><div className="mini-mark"><Moon size={20}/></div><div><b>MOON STAR</b><small>POINT OF SALE</small></div><button className="mobile-close" onClick={()=>setMobileNav(false)}><X size={18}/></button></div><div className="nav-label">WORKSPACE</div><nav>{nav.map(({label,icon:Icon})=><button key={label} className={`nav-item ${tab===label?"selected":""}`} onClick={()=>{setTab(label);setMobileNav(false)}}><Icon size={17}/>{label}</button>)}</nav><div className="sidebar-bottom"><div className="avatar">{user.name?.[0]?.toUpperCase()}</div><div className="profile"><b>{user.name}</b><small>{roleLabel(user.role)}</small></div><button className="logout" onClick={logout}><LogOut size={17}/></button></div></aside><main className="main-area"><header className="topbar"><div className="breadcrumb"><span>Workspace</span><i>/</i><b>{tab}</b></div><div className="top-right"><span className="live-dot"/> System online <div className="top-avatar">{user.name?.[0]?.toUpperCase()}</div></div><button className="mobile-menu" onClick={()=>setMobileNav(true)}><Menu size={21}/></button></header><div className="content"><div className="welcome"><div><p className="eyebrow">MOON STAR POS / {isSuper?"ADMINISTRATION":"STORE WORKSPACE"}</p><h1>{tab==="Overview"?<>Good to see you, <span>{user.name.split(" ")[0]}</span></>:tab}</h1><p className="muted">{isSuper?"Manage stores, users, inventory and business insights from one place.":"Your assigned stores and workspace access."}</p></div><span className="date-chip"><span className="live-dot"/> Live workspace</span></div>{error&&<div className="notice">{error}<button onClick={()=>setError("")}><X size={15}/></button></div>}{tab==="Overview"&&<Overview user={user} stores={stores} reports={reports} isSuper={isSuper} setTab={setTab}/>} {tab==="Reports"&&isSuper&&<Reports reports={reports}/>} {(tab==="Stores"||tab==="My Stores")&&<StoresPanel isSuper={isSuper} stores={stores} user={user} storeForm={storeForm} setStoreForm={setStoreForm} createStore={createStore} toggleStore={toggleStore}/>} {tab==="Users"&&isSuper&&<UsersPanel users={users} stores={stores} userForm={userForm} setUserForm={setUserForm} editingUser={editingUser} setEditingUser={setEditingUser} saveUser={saveUser} startEdit={startEdit} toggleUser={toggleUser} setStoreAccess={setStoreAccess}/>} {tab==="Items"&&isSuper&&<ItemsPanel items={items} stores={stores} itemForm={itemForm} setItemForm={setItemForm} createItem={createItem} setItemStoreStock={setItemStoreStock}/>}</div><footer>© {new Date().getFullYear()} Moon Star POS <span>Secure workspace · v1.0</span></footer></main></div>;
 }
-function Stat({title,value,note,icon,green}) { return <div className="stat-card"><div className="stat-top"><span>{title}</span><i>{icon}</i></div><strong className={green?"green":""}>{value}</strong><small>{note}</small></div>; }
+
+function Overview({user,stores,reports,isSuper,setTab}){const accessible=user.stores||[];return <><div className="stats-grid"><Stat title="Stores" value={isSuper?stores.length:accessible.length} note={isSuper?"Total locations":"Your assigned locations"} icon={<Store size={17}/>}/><Stat title="Active users" value={isSuper?(reports?.summary?.activeUsers||0):"—"} note="With system access" icon={<Users size={17}/>}/><Stat title="Items" value={isSuper?(reports?.summary?.activeItems||0):"—"} note="Active catalog items" icon={<Package size={17}/>}/><Stat title="System" value="Online" note="Application available" icon={<CheckCircle2 size={17}/>} green/></div><div className="two-col"><div className="panel"><div className="panel-head"><div><h2>Your store access</h2><p className="muted">{isSuper?"All stores are available to you.":"Stores explicitly assigned to your account."}</p></div></div>{(isSuper?stores:accessible).length?<div className="store-access-grid">{(isSuper?stores:accessible).map(s=><div className="store-access-card" key={s._id||s.id}><div className="store-icon"><Store size={18}/></div><div><b>{s.name}</b><small>{s.code}</small></div><span className="pill active">Access</span></div>)}</div>:<div className="empty-state"><Store size={25}/><b>No stores assigned</b><p>Ask an administrator to assign a store to your account.</p></div>}</div>{isSuper&&<div className="panel"><div className="panel-head"><div><h2>Inventory snapshot</h2><p className="muted">Current catalog health</p></div></div><div className="mini-metrics"><Metric label="Stock units" value={(reports?.summary?.totalStockUnits||0).toLocaleString()}/><Metric label="Low stock items" value={reports?.summary?.lowStockItems||0} warning/><Metric label="Inventory cost" value={money(reports?.summary?.inventoryCostValue)}/><Metric label="Retail value" value={money(reports?.summary?.inventoryRetailValue)}/></div><button className="secondary wide" onClick={()=>setTab("Reports")}>Open analytics <ArrowRight size={14}/></button></div>}</div></>}
+
+function Reports({reports}){if(!reports)return <div className="panel empty-state">Loading analytics…</div>;return <><div className="stats-grid"><Stat title="Inventory cost" value={money(reports.summary.inventoryCostValue)} note="Current stock valuation" icon={<Package size={17}/>}/><Stat title="Retail value" value={money(reports.summary.inventoryRetailValue)} note="Current stock at selling price" icon={<BarChart3 size={17}/>}/><Stat title="Potential margin" value={money(reports.summary.potentialGrossMargin)} note="Before operating costs" icon={<CheckCircle2 size={17}/>} green/><Stat title="Low stock" value={reports.summary.lowStockItems} note="At or below reorder level" icon={<Package size={17}/>}/></div><div className="two-col"><div className="panel"><div className="panel-head"><div><h2>Store inventory</h2><p className="muted">Stock units by location</p></div></div><div className="bar-list">{reports.storeStats.map(s=><div className="bar-row" key={s.id}><div><b>{s.name}</b><small>{s.code} · {s.active?"Active":"Inactive"}</small></div><strong>{s.stockUnits.toLocaleString()}</strong></div>)}</div></div><div className="panel"><div className="panel-head"><div><h2>Team composition</h2><p className="muted">Users by role</p></div></div><div className="role-list">{Object.entries(reports.usersByRole||{}).map(([role,count])=><div key={role}><span>{roleLabel(role)}</span><b>{count}</b></div>)}</div><div className="analytics-note"><BarChart3 size={17}/><span>Sales, returns, tax and payment analytics will be populated by the checkout transaction module.</span></div></div></div></>}
+
+function StoresPanel({isSuper,stores,user,storeForm,setStoreForm,createStore,toggleStore}){const list=isSuper?stores:(user.stores||[]);return <div className="panel"><div className="panel-head"><div><h2>{isSuper?"Store directory":"Your assigned stores"}</h2><p className="muted">{isSuper?"Create locations and control availability.":"Only stores assigned to your account are shown here."}</p></div><span className="count-pill">{list.length} stores</span></div>{isSuper&&<form className="inline-form" onSubmit={createStore}><input placeholder="Store name" value={storeForm.name} onChange={e=>setStoreForm({...storeForm,name:e.target.value})} required/><input placeholder="Code" value={storeForm.code} onChange={e=>setStoreForm({...storeForm,code:e.target.value})} required/><input placeholder="Address (optional)" value={storeForm.address} onChange={e=>setStoreForm({...storeForm,address:e.target.value})}/><button className="primary">＋ Add store</button></form>}<div className="table-wrap"><table><thead><tr><th>STORE</th><th>CODE</th><th>ADDRESS</th><th>STATUS</th>{isSuper&&<th/>}</tr></thead><tbody>{list.map(s=><tr key={s._id||s.id}><td><b>{s.name}</b></td><td><span className="code-pill">{s.code}</span></td><td>{s.address||"—"}</td><td><span className={`pill ${s.active===false?"inactive":"active"}`}>{s.active===false?"Inactive":"Active"}</span></td>{isSuper&&<td><button className="text-button" onClick={()=>toggleStore(s)}>{s.active===false?"Activate":"Deactivate"}</button></td>}</tr>)}</tbody></table>{!list.length&&<div className="empty-state">No stores to display.</div>}</div></div>}
+
+function UsersPanel({users,stores,userForm,setUserForm,editingUser,setEditingUser,saveUser,startEdit,toggleUser,setStoreAccess}){return <div className="panel"><div className="panel-head"><div><h2>User management</h2><p className="muted">Create accounts, edit permissions and assign exact store access.</p></div><span className="count-pill">{users.length} users</span></div><form className="user-form" onSubmit={saveUser}><input placeholder="Full name" value={userForm.name} onChange={e=>setUserForm({...userForm,name:e.target.value})} required/><input type="email" placeholder="Email address" value={userForm.email} onChange={e=>setUserForm({...userForm,email:e.target.value})} required disabled={!!editingUser}/><input type="password" minLength="12" placeholder={editingUser?"New password (optional)":"Password (12+ chars)"} value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} required={!editingUser}/><select value={userForm.role} onChange={e=>setUserForm({...userForm,role:e.target.value})}><option value="CASHIER">Cashier</option><option value="STORE_ADMIN">Store Admin</option></select><div className="access-box"><div className="access-title"><ShieldCheck size={16}/><b>Specific store access</b><span>Select exactly which stores this user can access.</span></div><div className="store-checks">{stores.map(s=><label className={userForm.storeIds.includes(String(s._id))?"checked":""} key={s._id}><input type="checkbox" checked={userForm.storeIds.includes(String(s._id))} onChange={e=>setStoreAccess(String(s._id),e.target.checked)}/><span>{s.name}<small>{s.code}</small></span></label>)}</div></div><div className="form-actions"><button className="primary">{editingUser?"Save changes":"＋ Create user"}</button>{editingUser&&<button type="button" className="secondary" onClick={()=>{setEditingUser(null);setUserForm({...blankUser})}}>Cancel</button>}</div></form><div className="table-wrap"><table><thead><tr><th>USER</th><th>ROLE</th><th>STORE ACCESS</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{users.map(p=><tr key={p._id}><td><b>{p.name}</b><small className="table-sub">{p.email}</small></td><td>{roleLabel(p.role)}</td><td>{(p.storeIds||[]).map(s=>s.name).join(", ")||"No stores"}</td><td><span className={`pill ${p.active?"active":"inactive"}`}>{p.active?"Active":"Inactive"}</span></td><td><button className="icon-button" title="Edit user" onClick={()=>startEdit(p)}><Edit3 size={15}/></button><button className="text-button" onClick={()=>toggleUser(p)}>{p.active?"Deactivate":"Activate"}</button></td></tr>)}</tbody></table></div></div>}
+
+function ItemsPanel({items,stores,itemForm,setItemForm,createItem,setItemStoreStock}){return <div className="panel"><div className="panel-head"><div><h2>Item catalog</h2><p className="muted">Create products, pricing, barcode data and opening stock by store.</p></div><span className="count-pill">{items.length} items</span></div><form className="item-form" onSubmit={createItem}><input placeholder="Item name" value={itemForm.name} onChange={e=>setItemForm({...itemForm,name:e.target.value})} required/><input placeholder="SKU" value={itemForm.sku} onChange={e=>setItemForm({...itemForm,sku:e.target.value})} required/><input placeholder="Barcode (optional)" value={itemForm.barcode} onChange={e=>setItemForm({...itemForm,barcode:e.target.value})}/><input placeholder="Category" value={itemForm.category} onChange={e=>setItemForm({...itemForm,category:e.target.value})}/><input type="number" min="0" step="0.01" placeholder="Cost price" value={itemForm.costPrice} onChange={e=>setItemForm({...itemForm,costPrice:e.target.value})} required/><input type="number" min="0" step="0.01" placeholder="Selling price" value={itemForm.sellingPrice} onChange={e=>setItemForm({...itemForm,sellingPrice:e.target.value})} required/><input type="number" min="0" placeholder="Reorder level" value={itemForm.reorderLevel} onChange={e=>setItemForm({...itemForm,reorderLevel:e.target.value})}/><div className="stock-opening"><b>Opening stock by store</b><div>{stores.map(s=><label key={s._id}>{s.name}<input type="number" min="0" value={itemForm.stockByStore.find(x=>String(x.storeId)===String(s._id))?.quantity||0} onChange={e=>setItemStoreStock(String(s._id),e.target.value)}/></label>)}</div></div><button className="primary">＋ Add item</button></form><div className="table-wrap"><table><thead><tr><th>ITEM</th><th>SKU</th><th>CATEGORY</th><th>COST</th><th>PRICE</th><th>STOCK</th><th>STATUS</th></tr></thead><tbody>{items.map(i=><tr key={i._id}><td><b>{i.name}</b><small className="table-sub">{i.barcode||"No barcode"}</small></td><td><span className="code-pill">{i.sku}</span></td><td>{i.category}</td><td>{money(i.costPrice)}</td><td>{money(i.sellingPrice)}</td><td>{(i.stockByStore||[]).reduce((n,x)=>n+(Number(x.quantity)||0),0)}</td><td><span className={`pill ${i.active?"active":"inactive"}`}>{i.active?"Active":"Inactive"}</span></td></tr>)}</tbody></table>{!items.length&&<div className="empty-state">No items created yet.</div>}</div></div>}
+
+function Stat({title,value,note,icon,green}){return <div className="stat-card"><div className="stat-top"><span>{title}</span><i>{icon}</i></div><strong className={green?"green":""}>{value}</strong><small>{note}</small></div>;}
+function Metric({label,value,warning}){return <div className="metric"><span>{label}</span><b className={warning?"warning-text":""}>{value}</b></div;}
