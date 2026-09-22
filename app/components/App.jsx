@@ -17,7 +17,22 @@ export default function App() {
   async function loadStoreContext(){try{const d=await request("/api/store/context");const saved=typeof window!=="undefined"?localStorage.getItem("moonstar_store"):null;const found=(d.stores||[]).find(s=>String(s.id)===String(saved))||(d.stores||[])[0];if(found){await request("/api/store/context",{method:"POST",body:JSON.stringify({storeId:found.id})});setSelectedStore(found);setUser(p=>p?{...p,stores:d.stores}:p);localStorage.setItem("moonstar_store",found.id);}else{setSelectedStore(null);setUser(p=>p?{...p,stores:d.stores||[]}:p);}}catch{setSelectedStore(null);}}\n  async function selectStore(storeId){try{const d=await request("/api/store/context",{method:"POST",body:JSON.stringify({storeId})});setSelectedStore(d.store);setUser(p=>p?{...p,stores:p.stores||[]}:p);localStorage.setItem("moonstar_store",d.store.id);setTab("POS");}catch(e){setError(e.message);}}\n  async function refresh(){try{const d=await request("/api/auth/me");setUser(d.user);if(d.user?.role==="SUPER_ADMIN")await loadAdmin();else if(d.user)await loadStoreContext();}catch{}finally{setLoading(false);}}
   useEffect(()=>{refresh();},[]);
   async function login(e){e.preventDefault();setError("");try{const d=await request("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});setUser(d.user);setPassword("");if(d.user.role==="SUPER_ADMIN")await loadAdmin();else await loadStoreContext();}catch(e){setError(e.message);}}
-  async function logout(){if(!window.confirm("Are you sure you want to log out?"))return;await request("/api/auth/logout",{method:"POST"});localStorage.removeItem("moonstar_store");setUser(null);setStores([]);setUsers([]);setItems([]);setReports(null);setSelectedStore(null);}
+  async function logout() {
+    if (!window.confirm("Are you sure you want to log out?")) return;
+
+    try {
+      await request("/api/auth/logout", { method: "POST" });
+      localStorage.removeItem("moonstar_store");
+      setUser(null);
+      setStores([]);
+      setUsers([]);
+      setItems([]);
+      setReports(null);
+      setSelectedStore(null);
+    } catch (e) {
+      setError(e.message);
+    }
+  }
   async function createStore(e){e.preventDefault();setError("");try{await request("/api/admin/stores",{method:"POST",body:JSON.stringify(storeForm)});setStoreForm({name:"",code:"",address:""});await loadAdmin();}catch(e){setError(e.message);}}
   async function saveUser(e){e.preventDefault();setError("");try{if(editingUser){const body={name:userForm.name,role:userForm.role,storeIds:userForm.storeIds};if(userForm.password)body.password=userForm.password;await request(`/api/admin/users/${editingUser._id}`,{method:"PATCH",body:JSON.stringify(body)});}else await request("/api/admin/users",{method:"POST",body:JSON.stringify(userForm)});setEditingUser(null);setUserForm({...blankUser});await loadAdmin();}catch(e){setError(e.message);}}
   async function toggleUser(p){try{await request(`/api/admin/users/${p._id}`,{method:"PATCH",body:JSON.stringify({active:!p.active})});await loadAdmin();}catch(e){setError(e.message);}}
