@@ -15,10 +15,15 @@ export async function GET() {
       {
         ok: false,
         database: "unavailable",
-        error:
-          process.env.NODE_ENV === "production"
-            ? "MongoDB connection failed. Check Vercel MONGODB_URI and MongoDB Atlas Network Access."
-            : error?.message || "MongoDB connection failed",
+        diagnostic: {
+          errorName: error?.name || "UnknownError",
+          errorCode: error?.code ?? null,
+          errorCodeName: error?.codeName ?? null,
+          message:
+            process.env.NODE_ENV === "production"
+              ? "MongoDB connection failed. Sensitive connection details are intentionally hidden."
+              : error?.message || "MongoDB connection failed",
+        },
       },
       { status: 503 }
     );
