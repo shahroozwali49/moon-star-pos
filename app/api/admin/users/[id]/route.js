@@ -3,10 +3,10 @@ export const runtime = "nodejs";
 
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
-import { connectDB } from "../../../../lib/mongodb";
-import User from "../../../../lib/models/User";
-import Store from "../../../../lib/models/Store";
-import { requireSuperAdmin } from "../../../../lib/permissions";
+import { connectDB } from "../../../../../lib/mongodb";
+import User from "../../../../../lib/models/User";
+import Store from "../../../../../lib/models/Store";
+import { requireSuperAdmin } from "../../../../../lib/permissions";
 
 export async function PATCH(request, { params }) {
   const auth = await requireSuperAdmin();
