@@ -1,3 +1,6 @@
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 import mongoose from "mongoose";
 import { connectDB } from "../../../../lib/mongodb";
 import Store from "../../../../lib/models/Store";
