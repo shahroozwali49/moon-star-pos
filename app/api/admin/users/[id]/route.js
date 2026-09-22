@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import bcrypt from "bcryptjs";
 import { connectDB } from "../../../../lib/mongodb";
 import User from "../../../../lib/models/User";
 import Store from "../../../../lib/models/Store";
@@ -15,6 +16,12 @@ export async function PATCH(request, { params }) {
   if (body.role !== undefined) {
     if (!["STORE_ADMIN", "CASHIER"].includes(body.role)) return Response.json({ error: "Invalid role" }, { status: 400 });
     update.role = body.role;
+  }
+  if (body.password !== undefined) {
+    if (typeof body.password !== "string" || body.password.length < 12) {
+      return Response.json({ error: "Password must be at least 12 characters" }, { status: 400 });
+    }
+    update.passwordHash = await bcrypt.hash(body.password, 12);
   }
   if (body.storeIds !== undefined) {
     await connectDB();
