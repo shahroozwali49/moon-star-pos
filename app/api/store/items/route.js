@@ -35,5 +35,5 @@ export async function GET(request) {
     const row = (item.stockByStore || []).find(x => String(x.storeId) === String(ctx.store._id));
     return { id: String(item._id), name: item.name, sku: item.sku, barcode: item.barcode, category: item.category, sellingPrice: item.sellingPrice, reorderLevel: item.reorderLevel, stock: Number(row?.quantity) || 0 };
   });
-  return Response.json({ store: { id: String(ctx.store._id), name: ctx.store.name, code: ctx.store.code }, items: scoped.filter(i => i.stock > 0) });
+  return Response.json({ store: { id: String(ctx.store._id), name: ctx.store.name, code: ctx.store.code }, items: scoped });
 }
