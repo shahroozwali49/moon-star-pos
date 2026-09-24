@@ -61,11 +61,20 @@ Use the seed credentials only for initial access, then implement a proper passwo
 - Super Admin user management
 - Store-specific user assignments
 - Responsive admin dashboard
+- Store-scoped POS till with barcode/search and category filters
+- Cart quantities, discounts, optional store tax, customer picker and quick-add
+- Hold/resume sales and till number tracking
+- Cash/card/other payment flow with tendered amount, change and printable receipt
+- Store-scoped sales history with date, cashier, till and paid/held filters
+- Customer records
+- Shared catalog category management
+- Store identity, currency, tax and receipt settings
+- Admin inventory and sales analytics
 - Database health endpoint
 
 ## Important
 
-This is a functional POS administration starter, not a fully audited commercial POS. Inventory, checkout, tax, receipts, payment integration, audit logs, password reset, rate limiting, and automated tests still need to be implemented and reviewed before production use.
+This is a functional POS foundation, not a fully audited commercial POS. Payment gateway integration, returns/refunds, cash-drawer reconciliation, audit logs, password reset, rate limiting, automated tests and deeper accounting/tax controls still need to be implemented and reviewed before production use.
 
 ## Security
 
