@@ -2,10 +2,10 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import mongoose from "mongoose";
-import { connectDB } from "../../../../../lib/mongodb";
-import HeldSale from "../../../../../lib/models/HeldSale";
-import User from "../../../../../lib/models/User";
-import { getSession } from "../../../../../lib/auth";
+import { connectDB } from "../../../../lib/mongodb";
+import HeldSale from "../../../../lib/models/HeldSale";
+import User from "../../../../lib/models/User";
+import { getSession } from "../../../../lib/auth";
 import { cookies } from "next/headers";
 
 async function context() {
