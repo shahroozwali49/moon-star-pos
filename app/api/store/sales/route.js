@@ -2,13 +2,13 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import mongoose from "mongoose";
-import { connectDB } from "../../../../lib/mongodb";
-import Item from "../../../../lib/models/Item";
-import User from "../../../../lib/models/User";
-import Store from "../../../../lib/models/Store";
-import Sale from "../../../../lib/models/Sale";
-import Customer from "../../../../lib/models/Customer";
-import { getSession } from "../../../../lib/auth";
+import { connectDB } from "../../../lib/mongodb";
+import Item from "../../../lib/models/Item";
+import User from "../../../lib/models/User";
+import Store from "../../../lib/models/Store";
+import Sale from "../../../lib/models/Sale";
+import Customer from "../../../lib/models/Customer";
+import { getSession } from "../../../lib/auth";
 import { cookies } from "next/headers";
 
 export async function POST(request) {
