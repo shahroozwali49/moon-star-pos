@@ -1,9 +1,9 @@
-import { connectDB } from "../../../../lib/mongodb";
-import Item from "../../../../lib/models/Item";
-import Store from "../../../../lib/models/Store";
-import User from "../../../../lib/models/User";
-import Sale from "../../../../lib/models/Sale";
-import { requireSuperAdmin } from "../../../../lib/permissions";
+import { connectDB } from "../../../lib/mongodb";
+import Item from "../../../lib/models/Item";
+import Store from "../../../lib/models/Store";
+import User from "../../../lib/models/User";
+import Sale from "../../../lib/models/Sale";
+import { requireSuperAdmin } from "../../../lib/permissions";
 
 export async function GET() {
   const auth = await requireSuperAdmin();
