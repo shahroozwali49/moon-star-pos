@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
-import { connectDB } from "../../../../lib/mongodb";
-import User from "../../../../lib/models/User";
-import { createSession, jsonError } from "../../../../lib/auth";
+import { connectDB } from "../../../lib/mongodb";
+import User from "../../../lib/models/User";
+import { createSession, jsonError } from "../../../lib/auth";
 
 export async function POST(request) {
   try {
