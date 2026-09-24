@@ -1,16 +1,19 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-import mongoose from "mongoose";
 import { connectDB } from "../../../../../lib/mongodb";
 import Store from "../../../../../lib/models/Store";
 import { requireSuperAdmin } from "../../../../../lib/permissions";
 
-export async function PATCH(request, { params }) {
+function validId(id) {
+  return /^[a-f0-9]{24}$/i.test(String(id || ""));
+}
+
+export async function PATCH(request, context) {
   const auth = await requireSuperAdmin();
   if (auth.error) return auth.error;
-  const { id } = await params;
-  if (!mongoose.isValidObjectId(id)) return Response.json({ error: "Invalid store id" }, { status: 400 });
+  const { id } = await context.params;
+  if (!validId(id)) return Response.json({ error: "Invalid store id" }, { status: 400 });
   const body = await request.json();
   const update = {};
   for (const key of ["name", "code", "address", "contact", "logoUrl", "receiptFooter", "currencySymbol", "active", "taxEnabled"]) {
