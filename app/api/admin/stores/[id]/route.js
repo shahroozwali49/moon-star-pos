@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-import { connectDB } from "../../../../../lib/mongodb";
-import Store from "../../../../../lib/models/Store";
-import { requireSuperAdmin } from "../../../../../lib/permissions";
+import { connectDB } from "../../../../lib/mongodb";
+import Store from "../../../../lib/models/Store";
+import { requireSuperAdmin } from "../../../../lib/permissions";
 
 function validId(id) {
   return /^[a-f0-9]{24}$/i.test(String(id || ""));
