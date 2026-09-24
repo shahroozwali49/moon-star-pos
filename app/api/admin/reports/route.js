@@ -2,6 +2,7 @@ import { connectDB } from "../../../../lib/mongodb";
 import Item from "../../../../lib/models/Item";
 import Store from "../../../../lib/models/Store";
 import User from "../../../../lib/models/User";
+import Sale from "../../../../lib/models/Sale";
 import { requireSuperAdmin } from "../../../../lib/permissions";
 
 export async function GET() {
@@ -9,10 +10,21 @@ export async function GET() {
   if (auth.error) return auth.error;
   await connectDB();
 
-  const [stores, users, items] = await Promise.all([
+  const [stores, users, items, salesSummary] = await Promise.all([
     Store.find().lean(),
     User.find().select("active role storeIds").lean(),
-    Item.find().populate("stockByStore.storeId", "name code").lean()
+    Item.find().populate("stockByStore.storeId", "name code").lean(),
+    Sale.aggregate([
+      {
+        $group: {
+          _id: null,
+          transactions: { $sum: 1 },
+          salesValue: { $sum: "$total" },
+          taxValue: { $sum: "$tax" },
+          discountValue: { $sum: "$discount" }
+        }
+      }
+    ])
   ]);
 
   const activeStores = stores.filter(s => s.active).length;
@@ -40,6 +52,8 @@ export async function GET() {
     return { id: String(store._id), name: store.name, code: store.code, active: store.active, stockUnits: quantity };
   });
 
+  const sales = salesSummary[0] || { transactions: 0, salesValue: 0, taxValue: 0, discountValue: 0 };
+
   return Response.json({
     generatedAt: new Date().toISOString(),
     summary: {
@@ -53,7 +67,11 @@ export async function GET() {
       lowStockItems,
       inventoryCostValue,
       inventoryRetailValue,
-      potentialGrossMargin: inventoryRetailValue - inventoryCostValue
+      potentialGrossMargin: inventoryRetailValue - inventoryCostValue,
+      transactions: sales.transactions,
+      salesValue: sales.salesValue,
+      taxValue: sales.taxValue,
+      discountValue: sales.discountValue
     },
     usersByRole: byRole,
     storeStats
