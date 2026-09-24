@@ -1,6 +1,6 @@
-import { connectDB } from "../../../../lib/mongodb";
-import User from "../../../../lib/models/User";
-import { getSession } from "../../../../lib/auth";
+import { connectDB } from "../../../lib/mongodb";
+import User from "../../../lib/models/User";
+import { getSession } from "../../../lib/auth";
 
 export async function GET() {
   const session = await getSession();
