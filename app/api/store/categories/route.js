@@ -18,6 +18,6 @@ export async function GET() {
   }
   const store = await Store.findOne({ _id: storeId, active: true }).select("_id").lean();
   if (!store) return Response.json({ error: "Store is unavailable" }, { status: 404 });
-  const categories = await Category.find({ storeId, active: true }).sort({ name: 1 }).lean();
+  const categories = await Category.find({ active: true }).sort({ name: 1 }).lean();
   return Response.json({ categories: categories.map(c => ({ id: String(c._id), name: c.name })) });
 }
