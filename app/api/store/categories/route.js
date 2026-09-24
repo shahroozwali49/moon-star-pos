@@ -1,8 +1,8 @@
-import { connectDB } from "../../../../lib/mongodb";
-import Category from "../../../../lib/models/Category";
-import User from "../../../../lib/models/User";
-import Store from "../../../../lib/models/Store";
-import { getSession } from "../../../../lib/auth";
+import { connectDB } from "../../../lib/mongodb";
+import Category from "../../../lib/models/Category";
+import User from "../../../lib/models/User";
+import Store from "../../../lib/models/Store";
+import { getSession } from "../../../lib/auth";
 import { cookies } from "next/headers";
 
 export async function GET() {
